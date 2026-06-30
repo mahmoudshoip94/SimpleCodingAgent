@@ -194,21 +194,6 @@ Example:
 * Ollama Python SDK
 * `nemotron-3-super:cloud`
 
----
-
-## Limitations
-
-To satisfy the assignment requirements, this project intentionally uses:
-
-* A single Large Language Model (LLM)
-* One main source file (`main.py`)
-* No LangChain
-* No CrewAI
-* No LangGraph
-* No AutoGen
-* No MCP
-* No RAG
-* No memory
 
 ---
 

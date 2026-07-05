@@ -123,7 +123,24 @@ Do not explain anything.
     print(f"\nCreated File: {filename}\n")
     print(code)
 
-    file_path = get_file_path(workspace_path, filename) ## create file path using workspace path and filename
+    file_path = get_file_path(workspace_path, filename)## create file path using workspace path and filename
+
+    if file_path.exists():
+        while True:
+            choice = input(
+                f"'{filename}' already exists.\n"
+                "Overwrite? (y/n): "
+            ).strip().lower()
+
+            if choice == "y":
+                break
+
+            elif choice == "n":
+                print("File creation cancelled.")
+                return
+
+            else:
+                print("Please enter y or n.")
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(code)
     print("File created successfully!")

@@ -24,6 +24,7 @@ def ask_model(prompt):
 def detect_request(request):
     """Detect user intent and return structured response from LLM"""
     prompt = f"""
+<<<<<<< Updated upstream
 You are a request classifier.
 Determine the user's intent.
 Return ONLY the structured output.
@@ -42,13 +43,39 @@ Return EXACTLY this format based on action type.
 
 For CREATE:
 ACTION: CREATE
+=======
+You are the Planner of a Coding Agent.
+
+Your ONLY responsibility is to decide the NEXT action.
+
+You NEVER generate code.
+You NEVER explain code.
+You NEVER execute code.
+
+You ONLY decide what the next tool should be.
+
+========================
+CURRENT USER GOAL
+========================
+
+{request}
+
+========================
+CURRENT MEMORY
+========================
+>>>>>>> Stashed changes
 
 For CREATE_FILES:
 ACTION: CREATE_FILES
 
+<<<<<<< Updated upstream
 For MODIFY:
 ACTION: MODIFY
 FILE: <filename>
+=======
+Recent Files:
+{chr(10).join(memory.recent_files) if memory.recent_files else "None"}
+>>>>>>> Stashed changes
 
 For EXPLAIN:
 ACTION: EXPLAIN
@@ -70,6 +97,7 @@ FOLDER: <folder_path>
 For ERROR:
 ACTION: ERROR
 
+<<<<<<< Updated upstream
 Rules:
 - Return ONLY the structured output
 - No markdown
@@ -78,6 +106,97 @@ Rules:
 
 User Request:
 {request}
+=======
+Fix Attempts:
+{memory.fix_attempts}
+
+Last Tool Success:
+{memory.last_tool_success}
+
+========================
+AVAILABLE ACTIONS
+========================
+
+CREATE
+MODIFY
+EXPLAIN
+RUN
+FINISH
+ERROR
+
+========================
+PLANNING RULES
+========================
+
+1. Read the user's goal carefully.
+
+2. Decide ONLY the NEXT action.
+
+3. Never generate code.
+
+4. Never explain your reasoning.
+
+5. Never invent filenames.
+
+6. If the user explicitly asks to CREATE a program,
+   return CREATE.
+
+7. If the user explicitly asks to RUN a file,
+   return RUN.
+
+8. If the user explicitly asks to MODIFY, FIX, CHANGE or UPDATE a file,
+   return MODIFY.
+
+9. If the user explicitly asks to EXPLAIN a file,
+   return EXPLAIN.
+
+10. If the requested file already exists in Recent Files,
+    NEVER return CREATE for that file.
+
+11. After CREATE succeeds,
+    the next action should be RUN for the created file.
+
+12. If RUN fails and Last Error is not empty:
+
+    - If Fix Attempts < 5
+      return MODIFY.
+
+    - Otherwise
+      return FINISH.
+
+13. After MODIFY,
+    the next action should be RUN.
+
+14. If the last action was RUN
+    and Last Tool Success is True,
+    return FINISH.
+
+15. If the goal has already been completed,
+    return FINISH.
+
+16. If you cannot determine the correct action,
+    return ERROR.
+
+========================
+OUTPUT FORMAT
+========================
+
+Return EXACTLY TWO lines.
+
+ACTION: <ACTION>
+
+FILE: <filename or empty>
+
+Example:
+
+ACTION: RUN
+FILE: calculator.py
+
+Do not return anything else.
+Do not use markdown.
+Do not use backticks.
+Do not explain.
+>>>>>>> Stashed changes
 """
 
     return ask_model(prompt)
@@ -410,6 +529,7 @@ def rename_file(workspace_path, old_name, new_name):
     except Exception as e:
         print(f"Error renaming file: {e}")
 
+<<<<<<< Updated upstream
 def run_file(workspace_path, filename):
     """Run a file based on its extension"""
     file_path = get_file_path(workspace_path, filename)
@@ -440,6 +560,56 @@ def run_file(workspace_path, filename):
                 ["g++", str(file_path), "-o", str(executable)],
                 capture_output=True,
                 text=True
+=======
+        return {
+            "success": False,
+            "output": "",
+            "error": str(e),
+            "returncode": -1
+        }
+
+
+def get_file_path(workspace_path, filename):
+    file_path = (workspace_path / filename).resolve() ## for folder & file path
+
+    if workspace_path.resolve() not in file_path.parents and file_path != workspace_path.resolve(): ## requirement 3
+        raise ValueError("Access outside the workspace is not allowed.") ## error handling for requirement 3
+
+    return file_path
+
+def execute_goal(workspace_path, request):
+
+    memory.update(goal=request)
+    memory.step_count = 0
+    memory.fix_attempts = 0
+
+    max_steps = 15
+
+    while memory.step_count < max_steps:
+
+        response = plan_next_action(
+            memory.goal,
+            memory
+        )
+
+        print("\n===== Planner Response =====")
+        print(response)
+        print("============================\n")
+
+        action, filename = parse_action(response)
+
+        if not filename and memory.recent_files:
+            filename = memory.recent_files[-1]
+
+        if action == "CREATE":
+            result = create_file(workspace_path, request)
+
+        elif action == "MODIFY":
+            result = modify_file(
+                workspace_path,
+                request,
+                filename
+>>>>>>> Stashed changes
             )
             
             if compile_result.returncode != 0:
@@ -461,6 +631,7 @@ def run_file(workspace_path, filename):
                 capture_output=True,
                 text=True
             )
+<<<<<<< Updated upstream
             
             if compile_result.returncode != 0:
                 print(f"Compilation failed:\n{compile_result.stderr}")
@@ -536,6 +707,38 @@ def dispatch_action(params, workspace_path, request):
     else:
         print(f"Unknown action: {action}")
         return False
+=======
+
+        elif action == "FINISH":
+            print("Goal completed.")
+            break
+
+        else:
+            print("Planner returned invalid action.")
+            break
+
+        memory.update(
+            output=result["output"],
+            error=result["error"],
+            success=result["success"]
+        )
+
+        if result["success"]:
+            memory.fix_attempts = 0
+
+        if not result["success"]:
+
+            memory.fix_attempts += 1
+
+            memory.update(
+                fix_attempt=f"Attempt {memory.fix_attempts}"
+            )
+    if memory.step_count >= max_steps:
+        print("\nMaximum agent steps reached.")
+
+
+
+>>>>>>> Stashed changes
 
 def main():
     print("=== Simple Single Coding Agent ===")
